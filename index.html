@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Project Chroma</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="A sci-fi space game on Roblox: a Mars-sized planet and its moon at real scale, and two people who were never meant to meet.">
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="icon" href="favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="canonical" href="https://projectchroma-game.github.io/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Project Chroma">
+<meta property="og:title" content="Project Chroma">
+<meta property="og:description" content="A sci-fi space game on Roblox: a Mars-sized planet and its moon at real scale, and two people who were never meant to meet.">
+<meta property="og:url" content="https://projectchroma-game.github.io/">
+<meta property="og:image" content="https://projectchroma-game.github.io/preview_card.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Aurelinde and Marrek, the two people the game follows, on a black backdrop">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+/* Layout: a moonlit stage split down the middle; each half holds one figure and, unseen, the other's bio. The rest of the
+   page reads like a field log: real figures in mono on the left, plain words on the right. One dark world by choice. */
+:root {
+  color-scheme: dark;
+  --void: #07080c;        /* the ground: night with a blue bias, between the two portraits' backdrops (3,3,6 and 9,9,11) */
+  --slate: #12141b;       /* raised surfaces */
+  --hair: #232733;        /* rules and outlines */
+  --moon: #dde1ea;        /* moon-silver: text */
+  --mist: #8d93a3;        /* secondary text */
+  --glyph: #bfe3ff;       /* her light: the glyphs, white light in black metal */
+  --ember: #d4703f;       /* his: ember hair, the red scarf */
+  --display: "Syncopate", "Michroma", "Eurostile", "Arial Black", sans-serif;
+  --serif: "Spectral", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step--1: 0.8125rem;
+  --step-0: 1.0625rem;
+  --step-1: 1.3125rem;
+  --step-2: 1.75rem;
+  --step-3: clamp(2rem, 4.6vw, 3.25rem);
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+}
+
+* { box-sizing: border-box; }
+html { background: var(--void); }
+body {
+  background: var(--void);
+  color: var(--moon);
+  font-family: var(--serif);
+  font-size: var(--step-0);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--glyph); outline-offset: 4px; }
+
+/* the dust: one canvas over the whole screen, never in the way */
+#dust { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; mix-blend-mode: screen; }
+
+/* ---- the stage ---- */
+.stage {
+  position: relative;
+  height: clamp(560px, 86vh, 920px);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+  isolation: isolate;
+}
+.stage::after { /* the floor: a low band of light where they stand */
+  content: "";
+  position: absolute; inset: auto 0 0 0; height: 30%;
+  background: linear-gradient(to top, rgba(191, 227, 255, 0.05), transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+.bar {
+  position: absolute; inset: 0 0 auto 0; z-index: 4;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  padding-block: 22px 0;
+  padding-left: var(--gutter-l); padding-right: var(--gutter-r);
+}
+.mark {
+  font-family: var(--display); font-weight: 700; font-size: 0.95rem;
+  letter-spacing: 0.62em; margin-right: -0.62em;
+}
+.mark small {
+  display: block; margin-top: 6px;
+  font-family: var(--mono); font-weight: 400; font-size: 0.6875rem;
+  letter-spacing: 0.08em; color: var(--mist);
+}
+@media (max-width: 520px) { /* the two-word title stays on one line beside the Support button */
+  .mark { font-size: 0.8125rem; letter-spacing: 0.36em; margin-right: -0.36em; white-space: nowrap; }
+}
+@media (max-width: 380px) {
+  .mark { font-size: 0.75rem; letter-spacing: 0.26em; margin-right: -0.26em; }
+}
+.support {
+  font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase;
+  text-decoration: none; color: var(--moon);
+  padding: 9px 14px; border: 1px solid var(--hair); border-radius: 2px;
+  transition: border-color 0.25s, color 0.25s;
+}
+.support:hover { border-color: var(--glyph); color: var(--glyph); }
+
+.half { position: relative; min-width: 0; }
+.half::before { /* each figure's light pool: a haze laid OVER the portrait (screen), so its backdrop and the page around
+  it take the same light and no frame edge shows (behind it, her pure-black backdrop read as a darker box) */
+  content: ""; position: absolute; left: 6%; right: 6%; bottom: -8%; height: 70%;
+  border-radius: 50%; filter: blur(34px); z-index: 2; pointer-events: none;
+  mix-blend-mode: screen;
+  transition: opacity 0.5s;
+}
+.half--left::before { background: radial-gradient(closest-side, rgba(191, 227, 255, 0.10), transparent); }
+.half--right::before { background: radial-gradient(closest-side, rgba(212, 112, 63, 0.09), transparent); }
+
+.fig {
+  position: absolute; inset: 0; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  padding: 0 0 26px; margin: 0;
+  background: none; border: 0; color: inherit; cursor: pointer;
+  opacity: 0.86;
+  transition: opacity 0.55s ease, transform 0.7s cubic-bezier(.2, .7, .2, 1), filter 0.55s;
+}
+.fig img {
+  display: block; min-height: 0; flex: 0 1 auto; width: auto; max-width: 100%;
+  object-fit: contain; object-position: center bottom;
+  user-select: none; -webkit-user-drag: none;
+  /* both portraits sit on near-black studio backdrops: their edges fade into the page (an ellipse for the sides and top,
+     a short ramp for the floor line under the boots) */
+  -webkit-mask-image: radial-gradient(ellipse 55% 62% at 50% 52%, #000 80%, transparent 100%), linear-gradient(to top, transparent 0%, #000 3.5%);
+  -webkit-mask-composite: source-in;
+          mask-image: radial-gradient(ellipse 55% 62% at 50% 52%, #000 80%, transparent 100%), linear-gradient(to top, transparent 0%, #000 3.5%);
+          mask-composite: intersect;
+}
+.fig--aurelinde { align-items: flex-end; padding-right: 7%; }
+.fig--aurelinde img { height: 90%; margin-top: auto; } /* 1.74 m beside his 1.88: her figure fills ~81 % of her frame (headroom), his ~87 % */
+.fig--marrek { align-items: flex-start; padding-left: 3%; }
+.fig--marrek img { height: 92%; margin-top: auto; }
+.tag { display: grid; gap: 4px; text-align: center; margin-top: 10px; min-width: 12ch; }
+.tag b { font-family: var(--display); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.42em; margin-right: -0.42em; }
+.tag span { font-family: var(--mono); font-size: 0.6875rem; letter-spacing: 0.06em; color: var(--mist); }
+
+/* the bio that takes the other figure's place */
+.bio {
+  position: absolute; z-index: 3;
+  top: 50%; left: 0; right: 0;
+  transform: translateY(-46%);
+  max-width: 36ch; margin-inline: auto;
+  max-height: 84%; overflow-y: auto; overscroll-behavior: contain;
+  padding-left: var(--gutter-l); padding-right: var(--gutter-r);
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity 0.5s ease 0.08s, transform 0.6s ease 0.08s, visibility 0s linear 0.6s;
+}
+.bio h2 {
+  margin: 0; font-family: var(--display); font-weight: 700; font-size: var(--step-2);
+  letter-spacing: 0.22em; line-height: 1.15; text-wrap: balance;
+}
+.bio .line {
+  margin: 10px 0 18px; font-family: var(--mono); font-size: var(--step--1); letter-spacing: 0.04em;
+}
+.bio p { margin: 0; font-weight: 300; font-size: 1.0625rem; line-height: 1.7; }
+.bio p + p { margin-top: 0.8em; }
+.bio--aurelinde .line { color: var(--glyph); }
+.bio--marrek .line { color: var(--ember); }
+
+.stage[data-active="aurelinde"] .fig--marrek,
+.stage[data-active="marrek"] .fig--aurelinde { opacity: 0; transform: translateY(8px) scale(0.985); pointer-events: none; }
+.stage[data-active="aurelinde"] .half--right::before,
+.stage[data-active="marrek"] .half--left::before { opacity: 0; }
+.stage[data-active="aurelinde"] .fig--aurelinde,
+.stage[data-active="marrek"] .fig--marrek { opacity: 1; filter: drop-shadow(0 0 22px rgba(191, 227, 255, 0.10)); }
+.stage[data-active="marrek"] .fig--marrek { filter: drop-shadow(0 0 22px rgba(212, 112, 63, 0.12)); }
+.stage[data-active="aurelinde"] .bio--aurelinde,
+.stage[data-active="marrek"] .bio--marrek {
+  opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(-50%);
+  transition: opacity 0.5s ease 0.12s, transform 0.6s ease 0.12s, visibility 0s;
+}
+
+.hint { /* at the very top: in the bar's row between the title and Support; below the bar where the row is too narrow */
+  position: absolute; z-index: 3; left: 0; right: 0; top: 31px; margin: 0; pointer-events: none;
+  text-align: center; font-family: var(--mono); font-size: 0.6875rem; letter-spacing: 0.12em; color: var(--mist);
+  transition: opacity 0.4s;
+}
+@media (max-width: 980px) { .hint { top: 102px; } }
+@media (max-width: 760px) { .hint { top: 78px; } } /* (the subtitle is hidden there) */
+.stage[data-active="aurelinde"] .hint, .stage[data-active="marrek"] .hint { opacity: 0; }
+
+/* ---- the page below ---- */
+.wrap {
+  max-width: 1080px; margin-inline: auto;
+  padding-left: var(--gutter-l); padding-right: var(--gutter-r);
+  position: relative; z-index: 1;
+}
+.premise { padding-block: 56px 72px; border-bottom: 1px solid var(--hair); }
+.premise p {
+  margin: 0; max-width: 30ch; font-size: var(--step-3); line-height: 1.22; font-weight: 300;
+  text-wrap: balance;
+}
+.premise p em { font-style: italic; color: var(--glyph); }
+.premise .after { margin-top: 22px; font-size: var(--step-0); max-width: 60ch; color: var(--mist); font-weight: 400; }
+
+section.block { padding-block: 72px; display: grid; gap: 36px; }
+.label {
+  margin: 0; font-family: var(--display); font-size: 0.75rem; font-weight: 400; letter-spacing: 0.5em; color: var(--mist);
+}
+.block h2 { margin: 0; font-weight: 400; font-size: var(--step-2); line-height: 1.25; max-width: 28ch; text-wrap: balance; }
+
+.facts-list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--hair); }
+.facts-list li {
+  display: grid; grid-template-columns: minmax(10ch, 15rem) 1fr; gap: 12px 40px; align-items: baseline;
+  padding-block: 26px; border-bottom: 1px solid var(--hair);
+}
+.figure {
+  font-family: var(--mono); font-weight: 500; font-size: var(--step-1); letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums; color: var(--glyph); white-space: nowrap;
+}
+.figure small { display: block; margin-top: 4px; font-weight: 400; font-size: 0.6875rem; letter-spacing: 0.08em; color: var(--mist); white-space: normal; }
+.facts-list h3 { margin: 0 0 6px; font-size: var(--step-1); font-weight: 500; line-height: 1.3; }
+.facts-list p { margin: 0; max-width: 62ch; color: #c3c8d4; font-weight: 300; }
+
+.media { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+.media figure { margin: 0; display: grid; gap: 10px; align-content: start; }
+.media figure.wide { grid-column: 1 / -1; }
+.media--pair { grid-template-columns: 1fr 1fr; }
+.note { margin: 0; max-width: 62ch; color: #c3c8d4; font-weight: 300; }
+.media img, .media video {
+  display: block; width: 100%; height: auto; max-width: 100%;
+  background: var(--slate); border: 1px solid var(--hair);
+}
+.media figcaption {
+  display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline;
+  font-family: var(--mono); font-size: 0.75rem; color: var(--mist); letter-spacing: 0.02em;
+}
+.media figcaption b { font-weight: 500; color: var(--moon); letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.6875rem; }
+
+.support-block { padding-block: 80px 64px; border-top: 1px solid var(--hair); display: grid; gap: 22px; justify-items: start; }
+.support-block p { margin: 0; max-width: 56ch; font-size: var(--step-1); line-height: 1.5; font-weight: 300; }
+.support-block .support { font-size: 0.8125rem; padding: 13px 20px; border-color: var(--glyph); color: var(--glyph); }
+.support-block .support:hover { background: rgba(191, 227, 255, 0.08); }
+.fine {
+  padding-block: 0 48px; display: grid; gap: 6px;
+  font-family: var(--mono); font-size: 0.6875rem; letter-spacing: 0.03em; color: var(--mist);
+}
+.fine p { margin: 0; max-width: 90ch; }
+.fine .legal { margin-top: 10px; }
+.fine a { color: inherit; text-underline-offset: 3px; }
+.fine a:hover { color: var(--glyph); }
+
+@media (max-width: 760px) {
+  .stage { height: clamp(520px, 80vh, 720px); }
+  .fig--aurelinde { padding-right: 2%; }
+  .fig--marrek { padding-left: 0; }
+  .bio { max-width: none; max-height: 76%; overflow-y: auto; overscroll-behavior: contain; padding-block: 4px; }
+  .bio h2 { font-size: 0.95rem; letter-spacing: 0.08em; overflow-wrap: anywhere; }
+  .bio .line { margin: 6px 0 12px; font-size: 0.6875rem; }
+  .bio p { font-size: 0.8125rem; line-height: 1.55; }
+  .tag b { font-size: 0.66rem; letter-spacing: 0.16em; margin-right: -0.16em; }
+  .tag span { font-size: 0.625rem; }
+  .tag { min-width: 0; }
+  .mark small { display: none; }
+  .facts-list li { grid-template-columns: 1fr; gap: 6px; padding-block: 22px; }
+  .media { grid-template-columns: 1fr; }
+  section.block { padding-block: 56px; }
+}
+
+/* ---- edit mode (the page's owner or an Editor, inside claude.ai's viewer only) */
+.editbar {
+  position: fixed; z-index: 30;
+  right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; max-width: calc(100vw - 32px);
+  font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.06em;
+}
+.editbar button, .replace {
+  font-family: var(--mono); font-size: 0.75rem; color: var(--moon); background: rgba(18, 20, 27, 0.94);
+  border: 1px solid var(--hair); border-radius: 2px; padding: 9px 14px; cursor: pointer;
+  text-transform: uppercase; letter-spacing: 0.12em;
+}
+.editbar button:hover, .replace:hover { border-color: var(--glyph); color: var(--glyph); }
+.editbar button.primary { border-color: var(--glyph); color: var(--glyph); }
+.editbar button:disabled { opacity: 0.5; cursor: default; }
+.editbar .status { color: var(--moon); background: rgba(18, 20, 27, 0.94); padding: 9px 12px; border: 1px solid var(--hair); max-width: 46ch; }
+body.editing [data-edit] { outline: 1px dashed rgba(191, 227, 255, 0.45); outline-offset: 3px; cursor: text; }
+body.editing [data-edit]:focus { outline: 1px solid var(--glyph); background: rgba(191, 227, 255, 0.06); }
+.media figure { position: relative; }
+.replace { position: absolute; z-index: 6; top: 10px; right: 10px; font-size: 0.6875rem; padding: 7px 10px; }
+.half .replace { top: auto; right: auto; bottom: 96px; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fig, .bio, .half::before, .hint { transition: none; }
+}
+</style>
+</head>
+<body>
+<canvas id="dust" aria-hidden="true"></canvas>
+
+<header class="stage" id="stage" data-active="">
+  <div class="bar">
+    <div class="mark">PROJECT CHROMA<small data-edit="mark-sub">a sci-fi space game on Roblox</small></div>
+    <a class="support" href="#support">Support</a>
+  </div>
+
+  <div class="half half--left">
+    <button class="fig fig--aurelinde" type="button" data-who="aurelinde" aria-pressed="false" aria-controls="bio-aurelinde">
+      <img data-edit-img="aurelinde" src="assets/aurelinde.webp" alt="Aurelinde, one hand on her hip: silver hair tied back, pointed ears, a long black coat trimmed with glyphs, high black boots" width="1000" height="1499">
+      <span class="tag"><b>AURELINDE</b><span>raised on the moon</span></span>
+    </button>
+    <section class="bio bio--marrek" id="bio-marrek" aria-label="Marrek">
+      <h2>MARREK</h2>
+      <div class="line" data-edit="marrek-line">technician, born on the planet</div>
+      <p data-edit="marrek-p1">Marrek's father disappeared when he was eight. Marrek says he walked out on them; his mother isn't so sure. They still live in the same house, with his father's things boxed up in the attic, and people who knew the man keep telling Marrek how much he looks like him. He doesn't enjoy hearing it.</p>
+      <p data-edit="marrek-p2">He works at a technician's shop in town. The owner, Kven, took him on at fifteen, partly out of pity, because the kid had no one and kept getting into fights. Marrek fixes whatever people bring in. After work he goes out to the woods to train with his gun he swiped off a patrol wagon and reworked himself.</p>
+    </section>
+  </div>
+
+  <div class="half half--right">
+    <button class="fig fig--marrek" type="button" data-who="marrek" aria-pressed="false" aria-controls="bio-marrek">
+      <img data-edit-img="marrek" src="assets/marrek.webp" alt="Marrek: ember-red hair, a short goatee, a dark red scarf, a dark armoured jacket, khaki trousers, black knee guards and steel-capped boots" width="1000" height="1500">
+      <span class="tag"><b>MARREK</b><span>born on the planet</span></span>
+    </button>
+    <section class="bio bio--aurelinde" id="bio-aurelinde" aria-label="Aurelinde">
+      <h2>AURELINDE</h2>
+      <div class="line" data-edit="aurelinde-line">grew up on the moon</div>
+      <p data-edit="aurelinde-p1">Aurelinde was four when her father sent her, her mother and her little brother Kennen up to the moon colony to wait out the trouble on the planet. He was going to join them later. He never did, and nobody has told her why.</p>
+      <p data-edit="aurelinde-p2">She grew up in and around the old castle in the middle of the colony. The oldest part of it is off limits, which didn't stop her from sneaking in with Kennen when she was fourteen. She's calm, reads a lot, and still listens in on her mother's meetings in case someone mentions her dad.</p>
+    </section>
+  </div>
+
+  <p class="hint" id="hint">Hover over either of them to read about them</p>
+</header>
+
+<main>
+  <div class="wrap premise">
+    <p data-edit="premise">Something struck both the planet and the moon colony. Two people who were never meant to meet are <em>drawn together, with an intertwined history</em>.</p>
+    <p class="after" data-edit="premise-after">It's a story game for one player, maybe two playing together, set on a planet and its moon at full size. Everything below is running in Roblox right now, and all of it is still being worked on.</p>
+  </div>
+
+  <div class="wrap">
+    <section class="block" aria-labelledby="world-h">
+      <p class="label">THE WORLD</p>
+      <h2 id="world-h" data-edit="world-title">What's working so far.</h2>
+      <ul class="facts-list">
+        <li>
+          <div class="figure">3,389.5 km<small>the planet's radius</small></div>
+          <div><h3 data-edit="world-1-title">A planet the size of Mars</h3><p data-edit="world-1-text">It's round, and it's full size. You can fly down from orbit, land wherever you like and get out and walk around.</p></div>
+        </li>
+        <li>
+          <div class="figure">87,000 km<small>to the moon</small></div>
+          <div><h3 data-edit="world-2-title">A moon you can fly to</h3><p data-edit="world-2-text">The moon is 87,000 km out. The quantum drive gets you there in about six seconds. Gravity on the moon is about a third of the planet's, and you can see the planet hanging in its sky.</p></div>
+        </li>
+        <li>
+          <div class="figure">2 h<small>one day</small></div>
+          <div><h3 data-edit="world-3-title">A sky worked out from the air</h3><p data-edit="world-3-text">A day lasts two hours. The colour of the sky, the sunsets and the haze are calculated from the atmosphere where you are, so the sky gets darker the higher you climb.</p></div>
+        </li>
+        <li>
+          <div class="figure">1 system<small>for every ship</small></div>
+          <div><h3 data-edit="world-4-title">Ships that fly on their thrusters</h3><p data-edit="world-4-text">Every ship has its own weight and its own thrusters, and gravity pulls on it like anything else. A heavy ship with weak engines flies like one.</p></div>
+        </li>
+        <li>
+          <div class="figure">custom<small>bodies and animation</small></div>
+          <div><h3 data-edit="world-5-title">Characters built from scratch</h3><p data-edit="world-5-text">They don't use Roblox's standard character. Their bodies and animation are custom made, and each foot is placed on whatever is under it, so stairs and slopes look right.</p></div>
+        </li>
+      </ul>
+    </section>
+
+    <section class="block" aria-labelledby="ships-h">
+      <p class="label">THE SHIPS</p>
+      <h2 id="ships-h" data-edit="ships-title">One of several ships being built.</h2>
+      <div class="media media--pair">
+        <figure>
+          <img data-edit-img="ship-front" src="assets/ship_front.webp" alt="The ship from the front on a dark stage: long straight wings, twin canted tails, the cockpit and the landing gear" width="1600" height="900" loading="lazy">
+          <figcaption><b>Ship</b><span data-edit="caption-1">from the front</span></figcaption>
+        </figure>
+        <figure>
+          <img data-edit-img="ship-back" src="assets/ship_back.webp" alt="The ship from behind, mostly in shadow: its exhausts glowing blue and red, the wings outlined by the light" width="1600" height="900" loading="lazy">
+          <figcaption><b>Ship</b><span data-edit="caption-2">from behind</span></figcaption>
+        </figure>
+      </div>
+      <p class="note" data-edit="ships-note">A fighter with long straight wings, twin canted tails and two engines. Capable of space travel. Rendered from its in-game model.</p>
+    </section>
+
+    <section class="block" aria-labelledby="work-h">
+      <p class="label">FROM THE WORKSHOP</p>
+      <h2 id="work-h" data-edit="work-title">Early screenshots and tests.</h2>
+      <div class="media">
+        <figure class="wide">
+          <img data-edit-img="moon-range" src="assets/moon_range.webp" alt="A nearly full moon in a blue sky over a snow-covered mountain range, seen from 6 km up" width="1600" height="670" loading="lazy">
+          <figcaption><b>In Roblox</b><span data-edit="caption-3">the moon over a snow-covered range 1,600 km north of the start, 6 km up</span></figcaption>
+        </figure>
+        <figure>
+          <img data-edit-img="planet" src="assets/planet.webp" alt="The planet's curved edge from 2,300 km up in daylight: blue sea, green and tan land, the thin blue line of its atmosphere against black space" width="940" height="596" loading="lazy">
+          <figcaption><b>In Roblox</b><span data-edit="caption-4">the planet from 2,300 km up</span></figcaption>
+        </figure>
+        <figure>
+          <img data-edit-img="moon-planet" src="assets/moon_planet.webp" alt="The moon, small and bright, above the planet's dark curved edge and its thin blue atmosphere" width="1305" height="826" loading="lazy">
+          <figcaption><b>In Roblox</b><span data-edit="caption-5">the moon above the planet's edge, 2,300 km up</span></figcaption>
+        </figure>
+        <figure>
+          <img data-edit-img="dusk" src="assets/dusk.webp" alt="The planet's curved horizon at dusk from 18 km up, a band of orange light under a deep blue sky" width="1600" height="668" loading="lazy">
+          <figcaption><b>In Roblox</b><span data-edit="caption-6">18 km up at dusk, the sun 6° above the horizon</span></figcaption>
+        </figure>
+        <figure>
+          <video src="assets/jump.mp4" width="720" height="528" autoplay muted loop playsinline aria-label="Aurelinde sprinting and jumping, a motion test"></video>
+          <figcaption><b>Motion test</b><span data-edit="caption-7">(old model) a sprint and jump, offline render; coat and hair simulated in newer model.</span></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="support-block" id="support" aria-labelledby="support-h">
+      <p class="label" id="support-h">SUPPORT</p>
+      <p data-edit="support-text">Everything I post is free and will stay free. If you want to support the project, there's a Patreon. Paying doesn't unlock anything. It just helps me keep working on it.</p>
+      <a class="support" href="https://www.patreon.com/c/ProjectChroma" target="_blank" rel="noopener">Support on Patreon</a>
+    </section>
+
+    <div class="fine">
+      <p data-edit="fine-1">Project Chroma is a working title. The portraits are renders of the characters' 3D models. In-engine shots are captured live in Roblox.</p>
+      <p data-edit="fine-2">No release date yet. This is a one-person project.</p>
+      <p class="legal"><a href="impressum.html">Impressum</a> · <a href="datenschutz.html">Datenschutz</a></p>
+    </div>
+  </div>
+</main>
+
+<script>
+(() => {
+  // ---- the two of them: hover (or focus, or a tap) shows one and puts the bio where the other stood
+  const stage = document.getElementById("stage");
+  const hint = document.getElementById("hint");
+  const figs = Array.from(stage.querySelectorAll(".fig"));
+  const fine = window.matchMedia("(hover: hover) and (pointer: fine)");
+  if (!fine.matches) hint.textContent = "Tap either of them to read about them";
+  const set = (who) => {
+    stage.dataset.active = who || "";
+    figs.forEach((f) => f.setAttribute("aria-pressed", String(f.dataset.who === who)));
+  };
+  // (while editing, a click picks whose bio shows and it stays, so its text can be typed into)
+  const editing = () => document.body.classList.contains("editing");
+  figs.forEach((f) => {
+    f.addEventListener("mouseenter", () => { if (fine.matches && !editing()) set(f.dataset.who); });
+    f.addEventListener("focus", () => { if (!editing()) set(f.dataset.who); });
+    f.addEventListener("click", () => {
+      if (!editing() && !fine.matches && stage.dataset.active === f.dataset.who) set("");
+      else set(f.dataset.who);
+    });
+  });
+  stage.addEventListener("mouseleave", () => { if (fine.matches && !editing()) set(""); });
+  stage.addEventListener("focusout", (e) => { if (!editing() && !stage.contains(e.relatedTarget)) set(""); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !editing()) set(""); });
+  document.addEventListener("click", (e) => { if (!fine.matches && !editing() && !stage.contains(e.target)) set(""); });
+
+  // ---- the dust: a light drift up the whole screen, and a denser swirl rising around each of them (cool silver around
+  // her, warm ember around him); the one you are looking at glows, the other's fades. With "reduce motion" set it moves
+  // at a third of the pace and stops twinkling rather than freezing.
+  const canvas = document.getElementById("dust");
+  const ctx = canvas.getContext("2d");
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const imgs = { aurelinde: stage.querySelector(".fig--aurelinde img"), marrek: stage.querySelector(".fig--marrek img") };
+  const TINT = { aurelinde: "206, 228, 255", marrek: "255, 186, 132" };
+  const BODY = { aurelinde: [0.28, 0.44], marrek: [0.24, 0.52] }; // where the figure stands across its frame: left edge, width
+  let w = 0, h = 0, air = [], near = [], last = 0, raf = 0;
+  const rnd = (lo, hi) => lo + Math.random() * (hi - lo);
+  const airMote = (anywhere) => {
+    const big = Math.random() < 0.06;
+    return {
+      x: rnd(0, w), y: anywhere ? rnd(0, h) : h + 10,
+      r: big ? rnd(1.8, 4.2) : rnd(0.4, 1.4),
+      vy: -rnd(9, 30) * (big ? 0.6 : 1), vx: rnd(-5, 5),
+      ph: rnd(0, 6.283), tw: rnd(0.8, 2.6), warm: Math.random() < 0.3, big,
+    };
+  };
+  const nearMote = (who, anywhere) => {
+    const big = Math.random() < 0.1;
+    return {
+      who, u: rnd(-0.2, 1.2), v: anywhere ? rnd(0, 1.05) : rnd(0.92, 1.08),
+      r: big ? rnd(1.6, 3.6) : rnd(0.5, 1.6),
+      vv: -rnd(0.035, 0.11), vu: rnd(-0.04, 0.04), sway: rnd(0.04, 0.14),
+      ph: rnd(0, 6.283), tw: rnd(1, 3.2), big,
+    };
+  };
+  const resize = () => {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    w = window.innerWidth; h = window.innerHeight;
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const n = Math.round(Math.min(200, Math.max(60, (w * h) / 9500)));
+    air = Array.from({ length: n }, () => airMote(true));
+    const k = w < 760 ? 45 : 85;
+    near = [];
+    for (const who of ["aurelinde", "marrek"]) for (let i = 0; i < k; i++) near.push(nearMote(who, true));
+  };
+  const dot = (x, y, r, rgb, a, soft) => {
+    if (a <= 0.004) return;
+    if (soft) {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3.2);
+      g.addColorStop(0, `rgba(${rgb}, ${a * 0.32})`);
+      g.addColorStop(1, `rgba(${rgb}, 0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, y, r * 3.2, 0, 6.2832); ctx.fill();
+    } else {
+      ctx.fillStyle = `rgba(${rgb}, ${a})`;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
+    }
+  };
+  const draw = (now) => {
+    const t = now / 1000;
+    const dt = last ? Math.min(0.05, t - last) : 1 / 60;
+    last = t;
+    const pace = reduce.matches ? 0.33 : 1;
+    const twinkle = (m) => (reduce.matches ? 0.8 : 0.45 + 0.55 * Math.sin(t * m.tw + m.ph));
+    ctx.clearRect(0, 0, w, h);
+    // the drift across the screen
+    for (let i = 0; i < air.length; i++) {
+      const m = air[i];
+      m.x += (m.vx + Math.sin(t * 0.5 + m.ph) * 7) * dt * pace;
+      m.y += m.vy * dt * pace;
+      if (m.y < -12 || m.x < -12 || m.x > w + 12) { air[i] = airMote(false); continue; }
+      dot(m.x, m.y, m.r, m.warm ? "255, 208, 166" : "214, 230, 255", 0.55 * twinkle(m), m.big);
+    }
+    // the swirl around each of them, in their frame's own place on the screen
+    const active = stage.dataset.active;
+    const box = {};
+    for (const who in imgs) {
+      const rc = imgs[who].getBoundingClientRect();
+      const [l, wd] = BODY[who];
+      box[who] = rc.bottom > 0 && rc.top < h ? { x: rc.left + rc.width * l, w: rc.width * wd, y: rc.top, h: rc.height } : null;
+    }
+    for (let i = 0; i < near.length; i++) {
+      const m = near[i];
+      m.v += m.vv * dt * pace;
+      m.u += (m.vu + Math.sin(t * 0.7 + m.ph) * m.sway) * dt * pace;
+      if (m.v < -0.06 || m.u < -0.35 || m.u > 1.35) { near[i] = nearMote(m.who, false); continue; }
+      const b = box[m.who];
+      if (!b) continue;
+      const level = !active ? 0.65 : active === m.who ? 1.15 : 0.12;
+      const edge = Math.min(1, (m.v + 0.06) / 0.25) * Math.min(1, (1.08 - m.v) / 0.12); // fades in at the feet, out above the head
+      dot(b.x + b.w * m.u, b.y + b.h * m.v, m.r * (active === m.who ? 1.15 : 1), TINT[m.who], 0.7 * level * edge * twinkle(m), m.big);
+    }
+    raf = requestAnimationFrame(draw);
+  };
+  const start = () => { cancelAnimationFrame(raf); last = 0; raf = requestAnimationFrame(draw); };
+  window.addEventListener("resize", resize);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) cancelAnimationFrame(raf); else start(); });
+  resize();
+  start();
+})();
+</script>
+
+</body>
+</html>
